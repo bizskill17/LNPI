@@ -6,11 +6,18 @@
 //
 // Then call: /api/show_log.php?token=...&lines=200
 
+ini_set("display_errors", "1");
+ini_set("display_startup_errors", "1");
+error_reporting(E_ALL);
+
 header("Content-Type: text/plain; charset=utf-8");
 
 $diagLog = __DIR__ . "/api_error.log";
 
 try {
+  echo "show_log: start\n";
+  @flush();
+
   // config.php lives in `public_html/config.php`
   $configPath = __DIR__ . "/../config.php";
   if (!file_exists($configPath)) {
