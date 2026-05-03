@@ -20,6 +20,13 @@ register_shutdown_function(function () use ($lnpiLogPath) {
   @file_put_contents($lnpiLogPath, $line, FILE_APPEND);
 });
 
+// Basic request trace (helps confirm the router is actually being executed).
+@file_put_contents(
+  $lnpiLogPath,
+  "[" . gmdate("c") . "] index.php hit uri=" . ($_SERVER["REQUEST_URI"] ?? "") . " method=" . ($_SERVER["REQUEST_METHOD"] ?? "") . "\n",
+  FILE_APPEND
+);
+
 // Hostinger layout: `public_html/api/*` and `public_html/src/*`
 require_once __DIR__ . "/../src/bootstrap.php";
 

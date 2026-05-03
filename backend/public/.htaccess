@@ -1,5 +1,6 @@
 <IfModule mod_rewrite.c>
   RewriteEngine On
+  RewriteBase /
 
   # Serve existing files directly
   RewriteCond %{REQUEST_FILENAME} -f [OR]
