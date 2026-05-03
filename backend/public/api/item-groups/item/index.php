@@ -2,28 +2,29 @@
 
 declare(strict_types=1);
 
-require_once __DIR__ . "/../../src/bootstrap.php";
+require_once __DIR__ . "/../../../../src/bootstrap.php";
 
 header("Content-Type: application/json; charset=utf-8");
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Headers: Content-Type, Authorization");
-header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
+header("Access-Control-Allow-Methods: PUT, DELETE, OPTIONS");
 
 if ($_SERVER["REQUEST_METHOD"] === "OPTIONS") {
   http_response_code(204);
   exit;
 }
 
+$id = (int)($_GET["id"] ?? 0);
+if ($id <= 0) {
+  http_response_code(400);
+  echo json_encode(["error" => "id is required"]);
+  exit;
+}
+
 $pdo = lnpi_db();
 
 try {
-  if ($_SERVER["REQUEST_METHOD"] === "GET") {
-    $rows = $pdo->query("SELECT id, item_group FROM item_groups ORDER BY item_group ASC")->fetchAll(PDO::FETCH_ASSOC);
-    echo json_encode(["rows" => array_map(fn($r) => ["id" => (int)$r["id"], "itemGroup" => (string)$r["item_group"]], $rows)]);
-    exit;
-  }
-
-  if ($_SERVER["REQUEST_METHOD"] === "POST") {
+  if ($_SERVER["REQUEST_METHOD"] === "PUT") {
     $body = json_decode((string)file_get_contents("php://input"), true);
     $itemGroup = trim((string)($body["itemGroup"] ?? ""));
     if ($itemGroup === "") {
@@ -31,9 +32,16 @@ try {
       echo json_encode(["error" => "itemGroup is required"]);
       exit;
     }
-    $stmt = $pdo->prepare("INSERT INTO item_groups (item_group) VALUES (:g)");
-    $stmt->execute([":g" => $itemGroup]);
-    echo json_encode(["ok" => true, "id" => (int)$pdo->lastInsertId(), "itemGroup" => $itemGroup]);
+    $stmt = $pdo->prepare("UPDATE item_groups SET item_group=:g WHERE id=:id");
+    $stmt->execute([":g" => $itemGroup, ":id" => $id]);
+    echo json_encode(["ok" => true]);
+    exit;
+  }
+
+  if ($_SERVER["REQUEST_METHOD"] === "DELETE") {
+    $stmt = $pdo->prepare("DELETE FROM item_groups WHERE id=:id");
+    $stmt->execute([":id" => $id]);
+    echo json_encode(["ok" => true]);
     exit;
   }
 
@@ -43,3 +51,4 @@ try {
   http_response_code(500);
   echo json_encode(["error" => "Server error", "detail" => $e->getMessage()]);
 }
+

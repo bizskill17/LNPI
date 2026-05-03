@@ -25,20 +25,26 @@ try {
     $whereSql = "";
     $params = [];
     if ($q !== "") {
-      $whereSql = "WHERE item_id LIKE :q OR item_name LIKE :q OR item_group LIKE :q";
+      $whereSql = "WHERE i.item_name LIKE :q OR g.item_group LIKE :q OR i.erp LIKE :q";
       $params[":q"] = "%" . $q . "%";
     }
 
-    $stmtTotal = $pdo->prepare("SELECT COUNT(*) AS c FROM items $whereSql");
+    $stmtTotal = $pdo->prepare(
+      "SELECT COUNT(*) AS c
+       FROM items i
+       JOIN item_groups g ON g.id = i.item_group_id
+       $whereSql"
+    );
     $stmtTotal->execute($params);
     $total = (int)($stmtTotal->fetchColumn() ?: 0);
 
     $offset = ($page - 1) * $pageSize;
     $stmt = $pdo->prepare(
-      "SELECT item_id, item_group, item_name, erp
-       FROM items
+      "SELECT i.id, i.item_name, i.erp, i.item_group_id, g.item_group
+       FROM items i
+       JOIN item_groups g ON g.id = i.item_group_id
        $whereSql
-       ORDER BY item_name ASC
+       ORDER BY i.item_name ASC
        LIMIT :limit OFFSET :offset"
     );
 
@@ -50,10 +56,11 @@ try {
     $rows = [];
     while ($r = $stmt->fetch(PDO::FETCH_ASSOC)) {
       $rows[] = [
-        "itemId" => (string)$r["item_id"],
-        "itemGroup" => (string)$r["item_group"],
+        "id" => (int)$r["id"],
         "itemName" => (string)$r["item_name"],
         "erp" => $r["erp"] !== null ? (string)$r["erp"] : null,
+        "itemGroupId" => (int)$r["item_group_id"],
+        "itemGroup" => (string)$r["item_group"],
       ];
     }
 
@@ -63,26 +70,21 @@ try {
 
   if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $body = json_decode((string)file_get_contents("php://input"), true);
-    $itemId = trim((string)($body["itemId"] ?? ""));
     $itemName = trim((string)($body["itemName"] ?? ""));
-    $itemGroup = trim((string)($body["itemGroup"] ?? ""));
+    $itemGroupId = (int)($body["itemGroupId"] ?? 0);
     $erp = isset($body["erp"]) ? trim((string)$body["erp"]) : null;
 
-    if ($itemId === "" || $itemName === "" || $itemGroup === "") {
+    if ($itemName === "" || $itemGroupId <= 0) {
       http_response_code(400);
-      echo json_encode(["error" => "itemId, itemName, itemGroup are required"]);
+      echo json_encode(["error" => "itemName and itemGroupId are required"]);
       exit;
     }
 
-    // Ensure item group exists to satisfy FK.
-    $stmtG = $pdo->prepare("INSERT IGNORE INTO item_groups (item_group) VALUES (:g)");
-    $stmtG->execute([":g" => $itemGroup]);
-
     $stmt = $pdo->prepare(
-      "INSERT INTO items (item_id, item_group, item_name, erp) VALUES (:id, :g, :n, :e)"
+      "INSERT INTO items (item_group_id, item_name, erp) VALUES (:gid, :n, :e)"
     );
-    $stmt->execute([":id" => $itemId, ":g" => $itemGroup, ":n" => $itemName, ":e" => ($erp === "" ? null : $erp)]);
-    echo json_encode(["ok" => true]);
+    $stmt->execute([":gid" => $itemGroupId, ":n" => $itemName, ":e" => ($erp === "" ? null : $erp)]);
+    echo json_encode(["ok" => true, "id" => (int)$pdo->lastInsertId()]);
     exit;
   }
 

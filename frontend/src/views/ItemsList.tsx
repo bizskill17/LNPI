@@ -4,8 +4,9 @@ import Pagination from "../components/common/Pagination";
 import { apiGet, apiSend } from "../lib/apiClient";
 
 type ItemRow = {
-  itemId: string;
+  id: number;
   itemGroup: string;
+  itemGroupId: number;
   itemName: string;
   erp: string | null;
 };
@@ -20,13 +21,13 @@ export default function ItemsList() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<ItemsResponse | null>(null);
-  const [groups, setGroups] = useState<string[]>([]);
+  const [groups, setGroups] = useState<Array<{ id: number; itemGroup: string }>>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [mode, setMode] = useState<"create" | "edit">("create");
-  const [form, setForm] = useState<{ itemId: string; itemName: string; itemGroup: string; erp: string }>({
-    itemId: "",
+  const [form, setForm] = useState<{ id: number; itemName: string; itemGroupId: number; erp: string }>({
+    id: 0,
     itemName: "",
-    itemGroup: "",
+    itemGroupId: 0,
     erp: ""
   });
   const [saving, setSaving] = useState(false);
@@ -34,8 +35,8 @@ export default function ItemsList() {
   const query = useMemo(() => ({ q, page, pageSize }), [q, page]);
 
   async function loadGroups() {
-    const res = await apiGet<{ rows: Array<{ itemGroup: string }> }>(`/item-groups/`);
-    if (res.ok) setGroups(res.data.rows.map((r) => r.itemGroup));
+    const res = await apiGet<{ rows: Array<{ id: number; itemGroup: string }> }>(`/item-groups/`);
+    if (res.ok) setGroups(res.data.rows);
   }
 
   useEffect(() => {
@@ -69,26 +70,30 @@ export default function ItemsList() {
 
   function openCreate() {
     setMode("create");
-    setForm({ itemId: "", itemName: "", itemGroup: groups[0] ?? "", erp: "" });
+    setForm({ id: 0, itemName: "", itemGroupId: groups[0]?.id ?? 0, erp: "" });
     setModalOpen(true);
   }
 
   function openEdit(r: ItemRow) {
     setMode("edit");
-    setForm({ itemId: r.itemId, itemName: r.itemName, itemGroup: r.itemGroup, erp: r.erp ?? "" });
+    setForm({ id: r.id, itemName: r.itemName, itemGroupId: r.itemGroupId, erp: r.erp ?? "" });
     setModalOpen(true);
   }
 
   async function save() {
     setSaving(true);
     setError(null);
-    const body = { itemId: form.itemId.trim(), itemName: form.itemName.trim(), itemGroup: form.itemGroup.trim(), erp: form.erp.trim() };
+    const body = {
+      itemName: form.itemName.trim(),
+      itemGroupId: form.itemGroupId,
+      erp: form.erp.trim()
+    };
     const res =
       mode === "create"
         ? await apiSend<{ ok: true }>(`/items/`, { method: "POST", body })
-        : await apiSend<{ ok: true }>(`/items/item.php?itemId=${encodeURIComponent(form.itemId)}`, {
+        : await apiSend<{ ok: true }>(`/items/item/?id=${form.id}`, {
             method: "PUT",
-            body: { itemName: body.itemName, itemGroup: body.itemGroup, erp: body.erp }
+            body: { itemName: body.itemName, itemGroupId: body.itemGroupId, erp: body.erp }
           });
     if (!res.ok) setError(res.error);
     if (res.ok) {
@@ -101,9 +106,9 @@ export default function ItemsList() {
   }
 
   async function del(itemId: string) {
-    if (!confirm(`Delete item ${itemId}?`)) return;
+    if (!confirm(`Delete this item?`)) return;
     setSaving(true);
-    const res = await apiSend<{ ok: true }>(`/items/item.php?itemId=${encodeURIComponent(itemId)}`, { method: "DELETE" });
+    const res = await apiSend<{ ok: true }>(`/items/item/?id=${encodeURIComponent(itemId)}`, { method: "DELETE" });
     if (!res.ok) setError(res.error);
     setSaving(false);
     setPage(1);
@@ -147,7 +152,6 @@ export default function ItemsList() {
             <table className="table">
               <thead>
                 <tr>
-                  <th>Item Id</th>
                   <th>Item Name</th>
                   <th>Item Group</th>
                   <th>ERP</th>
@@ -156,8 +160,7 @@ export default function ItemsList() {
               </thead>
               <tbody>
                 {rows.map((r) => (
-                  <tr key={r.itemId}>
-                    <td>{r.itemId}</td>
+                  <tr key={r.id}>
                     <td>{r.itemName}</td>
                     <td>{r.itemGroup}</td>
                     <td className="muted">{r.erp ?? "-"}</td>
@@ -166,7 +169,7 @@ export default function ItemsList() {
                         <button className="btn" onClick={() => openEdit(r)}>
                           Edit
                         </button>
-                        <button className="btn" onClick={() => del(r.itemId)}>
+                        <button className="btn" onClick={() => del(String(r.id))}>
                           Delete
                         </button>
                       </div>
@@ -185,7 +188,7 @@ export default function ItemsList() {
       {modalOpen ? (
         <div style={{ marginTop: 12 }} className="card">
           <div className="cardHeader">
-            <div style={{ fontWeight: 700 }}>{mode === "create" ? "Add Item" : `Edit Item: ${form.itemId}`}</div>
+            <div style={{ fontWeight: 700 }}>{mode === "create" ? "Add Item" : `Edit Item`}</div>
             <div className="muted" style={{ fontSize: 12 }}>
               {mode === "create" ? "Create a new item" : "Update item details"}
             </div>
@@ -194,26 +197,19 @@ export default function ItemsList() {
             <div className="row">
               <input
                 className="input"
-                placeholder="Item Id"
-                value={form.itemId}
-                disabled={mode === "edit"}
-                onChange={(e) => setForm((f) => ({ ...f, itemId: e.target.value }))}
-              />
-              <input
-                className="input"
                 placeholder="Item Name"
                 value={form.itemName}
                 onChange={(e) => setForm((f) => ({ ...f, itemName: e.target.value }))}
               />
               <select
                 className="input"
-                value={form.itemGroup}
-                onChange={(e) => setForm((f) => ({ ...f, itemGroup: e.target.value }))}
+                value={String(form.itemGroupId)}
+                onChange={(e) => setForm((f) => ({ ...f, itemGroupId: Number(e.target.value) }))}
               >
-                {groups.length ? null : <option value="">(No groups yet)</option>}
+                {groups.length ? null : <option value="0">(No groups yet)</option>}
                 {groups.map((g) => (
-                  <option key={g} value={g}>
-                    {g}
+                  <option key={g.id} value={String(g.id)}>
+                    {g.itemGroup}
                   </option>
                 ))}
               </select>

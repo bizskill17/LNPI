@@ -1,4 +1,11 @@
-export type RouteKey = "dashboard" | "items" | "materialIn" | "consumption" | "production";
+export type RouteKey =
+  | "dashboard"
+  | "items"
+  | "itemGroups"
+  | "uoms"
+  | "materialIn"
+  | "consumption"
+  | "production";
 
 export default function Sidebar({
   active,
@@ -11,7 +18,11 @@ export default function Sidebar({
     { title: "Overview", items: [{ key: "dashboard", label: "Dashboard" }] },
     {
       title: "Masters",
-      items: [{ key: "items", label: "Items" }]
+      items: [
+        { key: "items", label: "Items" },
+        { key: "itemGroups", label: "Item Groups" },
+        { key: "uoms", label: "UOM" }
+      ]
     },
     {
       title: "Operations",
@@ -52,4 +63,3 @@ export default function Sidebar({
     </aside>
   );
 }
-

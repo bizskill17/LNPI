@@ -1,20 +1,25 @@
 -- LNPI schema (mirrors the Excel "tables")
 
 CREATE TABLE IF NOT EXISTS item_groups (
-  item_group VARCHAR(255) PRIMARY KEY
+  id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  item_group VARCHAR(255) NOT NULL,
+  UNIQUE KEY uq_item_groups_name (item_group)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS uoms (
-  uom VARCHAR(64) PRIMARY KEY
+  id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  uom VARCHAR(64) NOT NULL,
+  UNIQUE KEY uq_uoms_name (uom)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS items (
-  item_id VARCHAR(64) PRIMARY KEY,
-  item_group VARCHAR(255) NOT NULL,
+  id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  item_group_id INT UNSIGNED NOT NULL,
   item_name VARCHAR(255) NOT NULL,
   erp VARCHAR(255) NULL,
   tally_post_timestamp DATETIME NULL,
-  CONSTRAINT fk_items_group FOREIGN KEY (item_group) REFERENCES item_groups(item_group)
+  KEY idx_items_group_id (item_group_id),
+  CONSTRAINT fk_items_group FOREIGN KEY (item_group_id) REFERENCES item_groups(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS material_in (
@@ -83,4 +88,3 @@ CREATE TABLE IF NOT EXISTS production (
   value DECIMAL(12,2) NULL,
   CONSTRAINT fk_production_item FOREIGN KEY (item_id) REFERENCES items(item_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-

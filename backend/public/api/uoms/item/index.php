@@ -2,28 +2,29 @@
 
 declare(strict_types=1);
 
-require_once __DIR__ . "/../../src/bootstrap.php";
+require_once __DIR__ . "/../../../../src/bootstrap.php";
 
 header("Content-Type: application/json; charset=utf-8");
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Headers: Content-Type, Authorization");
-header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
+header("Access-Control-Allow-Methods: PUT, DELETE, OPTIONS");
 
 if ($_SERVER["REQUEST_METHOD"] === "OPTIONS") {
   http_response_code(204);
   exit;
 }
 
+$id = (int)($_GET["id"] ?? 0);
+if ($id <= 0) {
+  http_response_code(400);
+  echo json_encode(["error" => "id is required"]);
+  exit;
+}
+
 $pdo = lnpi_db();
 
 try {
-  if ($_SERVER["REQUEST_METHOD"] === "GET") {
-    $rows = $pdo->query("SELECT id, uom FROM uoms ORDER BY uom ASC")->fetchAll(PDO::FETCH_ASSOC);
-    echo json_encode(["rows" => array_map(fn($r) => ["id" => (int)$r["id"], "uom" => (string)$r["uom"]], $rows)]);
-    exit;
-  }
-
-  if ($_SERVER["REQUEST_METHOD"] === "POST") {
+  if ($_SERVER["REQUEST_METHOD"] === "PUT") {
     $body = json_decode((string)file_get_contents("php://input"), true);
     $uom = trim((string)($body["uom"] ?? ""));
     if ($uom === "") {
@@ -31,9 +32,16 @@ try {
       echo json_encode(["error" => "uom is required"]);
       exit;
     }
-    $stmt = $pdo->prepare("INSERT INTO uoms (uom) VALUES (:u)");
-    $stmt->execute([":u" => $uom]);
-    echo json_encode(["ok" => true, "id" => (int)$pdo->lastInsertId(), "uom" => $uom]);
+    $stmt = $pdo->prepare("UPDATE uoms SET uom=:u WHERE id=:id");
+    $stmt->execute([":u" => $uom, ":id" => $id]);
+    echo json_encode(["ok" => true]);
+    exit;
+  }
+
+  if ($_SERVER["REQUEST_METHOD"] === "DELETE") {
+    $stmt = $pdo->prepare("DELETE FROM uoms WHERE id=:id");
+    $stmt->execute([":id" => $id]);
+    echo json_encode(["ok" => true]);
     exit;
   }
 
@@ -43,3 +51,4 @@ try {
   http_response_code(500);
   echo json_encode(["error" => "Server error", "detail" => $e->getMessage()]);
 }
+
