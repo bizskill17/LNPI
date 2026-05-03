@@ -42,7 +42,9 @@ jobs:
           protocol: ftps
           port: 21
           local-dir: ./backend/public/
-          server-dir: /public_html/
+          # Hostinger FTP root is already `public_html` (per hPanel),
+          # so deploy to `/` to avoid nesting `public_html/public_html`.
+          server-dir: /
           exclude: |
             **/.git*
             **/.github/**
@@ -56,7 +58,7 @@ jobs:
           protocol: ftps
           port: 21
           local-dir: ./backend/src/
-          server-dir: /public_html/src/
+          server-dir: /src/
           exclude: |
             **/.git*
             **/.github/**
@@ -71,4 +73,4 @@ jobs:
           protocol: ftps
           port: 21
           local-dir: ./frontend/dist/
-          server-dir: /public_html/app/
+          server-dir: /app/
