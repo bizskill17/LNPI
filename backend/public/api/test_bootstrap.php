@@ -4,7 +4,8 @@
 header("Content-Type: application/json; charset=utf-8");
 
 try {
-  $path = __DIR__ . "/../../src/bootstrap.php";
+  // Hostinger layout: `public_html/api/*` and `public_html/src/*`
+  $path = __DIR__ . "/../src/bootstrap.php";
   $info = [
     "bootstrapPath" => $path,
     "realpath" => realpath($path) ?: null,

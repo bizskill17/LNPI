@@ -20,7 +20,8 @@ register_shutdown_function(function () use ($lnpiLogPath) {
   @file_put_contents($lnpiLogPath, $line, FILE_APPEND);
 });
 
-require_once __DIR__ . "/../../src/bootstrap.php";
+// Hostinger layout: `public_html/api/*` and `public_html/src/*`
+require_once __DIR__ . "/../src/bootstrap.php";
 
 header("Content-Type: application/json; charset=utf-8");
 header("Access-Control-Allow-Origin: *");
