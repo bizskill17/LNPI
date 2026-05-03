@@ -29,7 +29,7 @@ export default function ItemsList() {
       setLoading(true);
       setError(null);
       const res = await apiGet<ItemsResponse>(
-        `/items?q=${encodeURIComponent(query.q)}&page=${query.page}&pageSize=${query.pageSize}`
+        `/items/?q=${encodeURIComponent(query.q)}&page=${query.page}&pageSize=${query.pageSize}`
       );
       if (cancelled) return;
       if (!res.ok) {
@@ -108,4 +108,3 @@ export default function ItemsList() {
     </div>
   );
 }
-
