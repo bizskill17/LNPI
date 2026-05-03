@@ -74,6 +74,7 @@ try {
     exit;
   }
 
+  echo "log lines=" . count($data) . "\n";
   $slice = array_slice($data, -$lines);
   echo implode("\n", $slice) . "\n";
 } catch (Throwable $e) {
