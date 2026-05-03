@@ -11,7 +11,8 @@ header("Content-Type: text/plain; charset=utf-8");
 $diagLog = __DIR__ . "/../api_error.log";
 
 try {
-  $configPath = __DIR__ . "/../../config.php";
+  // config.php lives in `public_html/config.php`
+  $configPath = __DIR__ . "/../config.php";
   if (!file_exists($configPath)) {
     http_response_code(500);
     echo "Missing config.php at $configPath\n";
