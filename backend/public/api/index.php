@@ -27,6 +27,11 @@ register_shutdown_function(function () use ($lnpiLogPath) {
   FILE_APPEND
 );
 
+// Make router errors visible in log even if rewriting fails mid-flight.
+ini_set("display_errors", "0");
+ini_set("log_errors", "1");
+ini_set("error_log", $lnpiLogPath);
+
 // Hostinger layout: `public_html/api/*` and `public_html/src/*`
 require_once __DIR__ . "/../src/bootstrap.php";
 

@@ -1,6 +1,7 @@
 <IfModule mod_rewrite.c>
   RewriteEngine On
   RewriteBase /
+  Options -MultiViews
 
   # Serve existing files directly
   RewriteCond %{REQUEST_FILENAME} -f [OR]
