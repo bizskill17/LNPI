@@ -10,6 +10,16 @@ if (isset($_GET["debug"]) && $_GET["debug"] === "1") {
 
 declare(strict_types=1);
 
+// Always log fatal errors to a local file we can read via File Manager.
+// Hostinger sometimes hides PHP error output behind a generic 500 page.
+$lnpiLogPath = __DIR__ . "/../api_error.log";
+register_shutdown_function(function () use ($lnpiLogPath) {
+  $err = error_get_last();
+  if (!$err) return;
+  $line = "[" . gmdate("c") . "] FATAL {$err["type"]}: {$err["message"]} in {$err["file"]}:{$err["line"]}\n";
+  @file_put_contents($lnpiLogPath, $line, FILE_APPEND);
+});
+
 require_once __DIR__ . "/../../src/bootstrap.php";
 
 header("Content-Type: application/json; charset=utf-8");
@@ -82,6 +92,11 @@ try {
   http_response_code(404);
   echo json_encode(["error" => "Not found"]);
 } catch (Throwable $e) {
+  @file_put_contents(
+    $lnpiLogPath,
+    "[" . gmdate("c") . "] EXCEPTION " . get_class($e) . ": " . $e->getMessage() . " @ " . $e->getFile() . ":" . $e->getLine() . "\n",
+    FILE_APPEND
+  );
   http_response_code(500);
   echo json_encode(["error" => "Server error", "detail" => $e->getMessage()]);
 }
