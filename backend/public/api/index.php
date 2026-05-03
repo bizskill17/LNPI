@@ -1,16 +1,16 @@
 <?php
 
-declare(strict_types=1);
-
-require_once __DIR__ . "/../../src/bootstrap.php";
-
-// Temporary debugging aid: append ?debug=1 to see PHP errors in response.
-// Keep off by default.
+// Ultra-early debug output (before strict_types/require) for shared-hosting 500s.
+// Visit /api/health?debug=1 to see errors.
 if (isset($_GET["debug"]) && $_GET["debug"] === "1") {
   ini_set("display_errors", "1");
   ini_set("display_startup_errors", "1");
   error_reporting(E_ALL);
 }
+
+declare(strict_types=1);
+
+require_once __DIR__ . "/../../src/bootstrap.php";
 
 header("Content-Type: application/json; charset=utf-8");
 header("Access-Control-Allow-Origin: *");
