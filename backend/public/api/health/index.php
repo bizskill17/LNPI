@@ -1,0 +1,6 @@
+<?php
+
+// Direct endpoint (no rewrite) for environments where extensionless rewrite is problematic.
+header("Content-Type: application/json; charset=utf-8");
+echo json_encode(["ok" => true, "time" => gmdate("c")]);
+
