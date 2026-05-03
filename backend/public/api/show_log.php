@@ -8,39 +8,56 @@
 
 header("Content-Type: text/plain; charset=utf-8");
 
-function lnpi_read_config(): array {
+$diagLog = __DIR__ . "/../api_error.log";
+
+try {
   $configPath = __DIR__ . "/../../config.php";
-  if (!file_exists($configPath)) return [];
-  $cfg = require $configPath;
-  return is_array($cfg) ? $cfg : [];
-}
+  if (!file_exists($configPath)) {
+    http_response_code(500);
+    echo "Missing config.php at $configPath\n";
+    exit;
+  }
 
-$cfg = lnpi_read_config();
-$token = (string)($_GET["token"] ?? "");
-$expected = (string)($cfg["debugToken"] ?? "");
+  $cfg = include $configPath;
+  if (!is_array($cfg)) {
+    http_response_code(500);
+    echo "config.php did not return an array\n";
+    exit;
+  }
 
-if ($expected === "" || $token === "" || !hash_equals($expected, $token)) {
-  http_response_code(403);
-  echo "Forbidden\n";
-  exit;
-}
+  $token = (string)($_GET["token"] ?? "");
+  $expected = (string)($cfg["debugToken"] ?? "");
 
-$lines = (int)($_GET["lines"] ?? 200);
-$lines = max(10, min(1000, $lines));
+  if ($expected === "" || $token === "" || !hash_equals($expected, $token)) {
+    http_response_code(403);
+    echo "Forbidden\n";
+    exit;
+  }
 
-$logPath = __DIR__ . "/../api_error.log";
-if (!file_exists($logPath)) {
-  echo "Log file not found: $logPath\n";
-  exit;
-}
+  $lines = (int)($_GET["lines"] ?? 200);
+  $lines = max(10, min(1000, $lines));
 
-$data = @file($logPath, FILE_IGNORE_NEW_LINES);
-if ($data === false) {
+  $logPath = __DIR__ . "/../api_error.log";
+  if (!file_exists($logPath)) {
+    echo "Log file not found: $logPath\n";
+    exit;
+  }
+
+  $data = @file($logPath, FILE_IGNORE_NEW_LINES);
+  if ($data === false) {
+    http_response_code(500);
+    echo "Could not read log file.\n";
+    exit;
+  }
+
+  $slice = array_slice($data, -$lines);
+  echo implode("\n", $slice) . "\n";
+} catch (Throwable $e) {
+  @file_put_contents(
+    $diagLog,
+    "[" . gmdate("c") . "] show_log.php " . get_class($e) . ": " . $e->getMessage() . " @ " . $e->getFile() . ":" . $e->getLine() . "\n",
+    FILE_APPEND
+  );
   http_response_code(500);
-  echo "Could not read log file.\n";
-  exit;
+  echo "show_log.php failed: " . $e->getMessage() . "\n";
 }
-
-$slice = array_slice($data, -$lines);
-echo implode("\n", $slice) . "\n";
-
