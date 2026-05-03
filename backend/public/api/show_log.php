@@ -20,13 +20,16 @@ try {
 
   // config.php lives in `public_html/config.php`
   $configPath = __DIR__ . "/../config.php";
+  echo "configPath=$configPath\n";
   if (!file_exists($configPath)) {
     http_response_code(500);
     echo "Missing config.php at $configPath\n";
     exit;
   }
 
+  echo "config exists\n";
   $cfg = include $configPath;
+  echo "config included\n";
   if (!is_array($cfg)) {
     http_response_code(500);
     echo "config.php did not return an array\n";
@@ -35,6 +38,7 @@ try {
 
   $token = (string)($_GET["token"] ?? "");
   $expected = (string)($cfg["debugToken"] ?? "");
+  echo "tokenLen=" . strlen($token) . " expectedLen=" . strlen($expected) . "\n";
 
   if ($expected === "" || $token === "" || !hash_equals($expected, $token)) {
     http_response_code(403);
@@ -42,6 +46,7 @@ try {
     exit;
   }
 
+  echo "token ok\n";
   $lines = (int)($_GET["lines"] ?? 200);
   $lines = max(10, min(1000, $lines));
 
@@ -61,6 +66,7 @@ try {
     exit;
   }
 
+  echo "log readable: $logPath\n";
   $data = @file($logPath, FILE_IGNORE_NEW_LINES);
   if ($data === false) {
     http_response_code(500);
