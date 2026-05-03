@@ -12,7 +12,7 @@ declare(strict_types=1);
 
 // Always log fatal errors to a local file we can read via File Manager.
 // Hostinger sometimes hides PHP error output behind a generic 500 page.
-$lnpiLogPath = __DIR__ . "/../api_error.log";
+$lnpiLogPath = __DIR__ . "/api_error.log";
 register_shutdown_function(function () use ($lnpiLogPath) {
   $err = error_get_last();
   if (!$err) return;

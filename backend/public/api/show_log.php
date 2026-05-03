@@ -8,7 +8,7 @@
 
 header("Content-Type: text/plain; charset=utf-8");
 
-$diagLog = __DIR__ . "/../api_error.log";
+$diagLog = __DIR__ . "/api_error.log";
 
 try {
   // config.php lives in `public_html/config.php`
@@ -38,7 +38,7 @@ try {
   $lines = (int)($_GET["lines"] ?? 200);
   $lines = max(10, min(1000, $lines));
 
-  $logPath = __DIR__ . "/../api_error.log";
+  $logPath = __DIR__ . "/api_error.log";
   if (!file_exists($logPath)) {
     echo "Log file not found: $logPath\n";
     exit;
