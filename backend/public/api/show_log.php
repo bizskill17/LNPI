@@ -40,7 +40,17 @@ try {
 
   $logPath = __DIR__ . "/api_error.log";
   if (!file_exists($logPath)) {
+    // Try to create so we can confirm write permissions.
+    @touch($logPath);
+  }
+  if (!file_exists($logPath)) {
     echo "Log file not found: $logPath\n";
+    echo "api dir writable: " . (is_writable(__DIR__) ? "yes" : "no") . "\n";
+    exit;
+  }
+  if (!is_readable($logPath)) {
+    http_response_code(500);
+    echo "Log file exists but is not readable: $logPath\n";
     exit;
   }
 
