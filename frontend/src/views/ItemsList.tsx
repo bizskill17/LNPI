@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Spinner from "../components/common/Spinner";
 import Pagination from "../components/common/Pagination";
-import { apiGet } from "../lib/apiClient";
+import { apiGet, apiSend } from "../lib/apiClient";
 
 type ItemRow = {
   itemId: string;
@@ -20,8 +20,27 @@ export default function ItemsList() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<ItemsResponse | null>(null);
+  const [groups, setGroups] = useState<string[]>([]);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [mode, setMode] = useState<"create" | "edit">("create");
+  const [form, setForm] = useState<{ itemId: string; itemName: string; itemGroup: string; erp: string }>({
+    itemId: "",
+    itemName: "",
+    itemGroup: "",
+    erp: ""
+  });
+  const [saving, setSaving] = useState(false);
 
   const query = useMemo(() => ({ q, page, pageSize }), [q, page]);
+
+  async function loadGroups() {
+    const res = await apiGet<{ rows: Array<{ itemGroup: string }> }>(`/item-groups/`);
+    if (res.ok) setGroups(res.data.rows.map((r) => r.itemGroup));
+  }
+
+  useEffect(() => {
+    loadGroups();
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -48,6 +67,49 @@ export default function ItemsList() {
   const rows = data?.rows ?? [];
   const total = data?.total ?? 0;
 
+  function openCreate() {
+    setMode("create");
+    setForm({ itemId: "", itemName: "", itemGroup: groups[0] ?? "", erp: "" });
+    setModalOpen(true);
+  }
+
+  function openEdit(r: ItemRow) {
+    setMode("edit");
+    setForm({ itemId: r.itemId, itemName: r.itemName, itemGroup: r.itemGroup, erp: r.erp ?? "" });
+    setModalOpen(true);
+  }
+
+  async function save() {
+    setSaving(true);
+    setError(null);
+    const body = { itemId: form.itemId.trim(), itemName: form.itemName.trim(), itemGroup: form.itemGroup.trim(), erp: form.erp.trim() };
+    const res =
+      mode === "create"
+        ? await apiSend<{ ok: true }>(`/items/`, { method: "POST", body })
+        : await apiSend<{ ok: true }>(`/items/item.php?itemId=${encodeURIComponent(form.itemId)}`, {
+            method: "PUT",
+            body: { itemName: body.itemName, itemGroup: body.itemGroup, erp: body.erp }
+          });
+    if (!res.ok) setError(res.error);
+    if (res.ok) {
+      setModalOpen(false);
+      await loadGroups();
+      setPage(1);
+      setQ("");
+    }
+    setSaving(false);
+  }
+
+  async function del(itemId: string) {
+    if (!confirm(`Delete item ${itemId}?`)) return;
+    setSaving(true);
+    const res = await apiSend<{ ok: true }>(`/items/item.php?itemId=${encodeURIComponent(itemId)}`, { method: "DELETE" });
+    if (!res.ok) setError(res.error);
+    setSaving(false);
+    setPage(1);
+    setQ("");
+  }
+
   return (
     <div className="card">
       <div className="cardHeader">
@@ -59,6 +121,9 @@ export default function ItemsList() {
             </div>
           </div>
           <div className="row">
+            <button className="btn btnPrimary" onClick={openCreate}>
+              + Add
+            </button>
             <input
               className="input"
               value={q}
@@ -86,6 +151,7 @@ export default function ItemsList() {
                   <th>Item Name</th>
                   <th>Item Group</th>
                   <th>ERP</th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody>
@@ -95,6 +161,16 @@ export default function ItemsList() {
                     <td>{r.itemName}</td>
                     <td>{r.itemGroup}</td>
                     <td className="muted">{r.erp ?? "-"}</td>
+                    <td>
+                      <div className="row" style={{ justifyContent: "flex-end" }}>
+                        <button className="btn" onClick={() => openEdit(r)}>
+                          Edit
+                        </button>
+                        <button className="btn" onClick={() => del(r.itemId)}>
+                          Delete
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -105,6 +181,60 @@ export default function ItemsList() {
           <Pagination page={page} pageSize={pageSize} total={total} onChange={setPage} />
         </div>
       </div>
+
+      {modalOpen ? (
+        <div style={{ marginTop: 12 }} className="card">
+          <div className="cardHeader">
+            <div style={{ fontWeight: 700 }}>{mode === "create" ? "Add Item" : `Edit Item: ${form.itemId}`}</div>
+            <div className="muted" style={{ fontSize: 12 }}>
+              {mode === "create" ? "Create a new item" : "Update item details"}
+            </div>
+          </div>
+          <div className="cardBody">
+            <div className="row">
+              <input
+                className="input"
+                placeholder="Item Id"
+                value={form.itemId}
+                disabled={mode === "edit"}
+                onChange={(e) => setForm((f) => ({ ...f, itemId: e.target.value }))}
+              />
+              <input
+                className="input"
+                placeholder="Item Name"
+                value={form.itemName}
+                onChange={(e) => setForm((f) => ({ ...f, itemName: e.target.value }))}
+              />
+              <select
+                className="input"
+                value={form.itemGroup}
+                onChange={(e) => setForm((f) => ({ ...f, itemGroup: e.target.value }))}
+              >
+                {groups.length ? null : <option value="">(No groups yet)</option>}
+                {groups.map((g) => (
+                  <option key={g} value={g}>
+                    {g}
+                  </option>
+                ))}
+              </select>
+              <input
+                className="input"
+                placeholder="ERP (optional)"
+                value={form.erp}
+                onChange={(e) => setForm((f) => ({ ...f, erp: e.target.value }))}
+              />
+            </div>
+            <div className="row" style={{ justifyContent: "flex-end", marginTop: 12 }}>
+              <button className="btn" onClick={() => setModalOpen(false)} disabled={saving}>
+                Cancel
+              </button>
+              <button className="btn btnPrimary" onClick={save} disabled={saving}>
+                {saving ? "Saving…" : "Save"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
